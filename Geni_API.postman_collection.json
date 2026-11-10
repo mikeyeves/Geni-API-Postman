@@ -1,0 +1,5205 @@
+{
+  "info": {
+    "_postman_id": "167798a2-51a6-4f19-afce-a1adc9294ff0",
+    "name": "Geni API",
+    "description": "Postman collection for the **Geni API** (geni.com, part of MyHeritage) — the World Family Tree: profiles, unions (families), ancestors, immediate family, relationship path, surnames, projects, documents, photos, videos and users. Generated from the 89 endpoints in the official reference: https://www.geni.com/platform/developer/help\n\n**Setup**\n1. Register an app at https://www.geni.com/platform/developer/apps to get an App Key (client_id) and App Secret (client_secret). Set your Site Domain; redirect_uri must be on it.\n2. Fill client_id, client_secret, redirect_uri in the collection Variables.\n3. Run 00 step 1 → sign in → copy code into auth_code → step 2. The token is sent as ?access_token= on every request.\n\nOr use Postman's built-in OAuth 2.0 (Authorization Code): Auth URL {{oauth_base}}/authorize, Access Token URL {{oauth_base}}/request_token, client credentials in body, then add the token as query param access_token.\n\n**Notes**: Geni does not accept cookie authentication for the API. Object ids look like profile-g6000000012345678901 — the collection adds the 'profile-' prefix, so put only the part after it in profile_id. Writes use POST (form data or JSON). Watch X-API-Rate-Limit / X-API-Rate-Remaining / X-API-Rate-Window headers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "access_token",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{access_token}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "query",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const rem=pm.response.headers.get('X-API-Rate-Remaining'); if(rem!==undefined&&rem!==null) console.log('Rate remaining:',rem,'of',pm.response.headers.get('X-API-Rate-Limit'),'per',pm.response.headers.get('X-API-Rate-Window'),'s');",
+          "try{const j=pm.response.json(); if(j.error) console.warn('Geni error:',j.error.type,j.error.message);}catch(e){}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 · Authentication (OAuth 2.0)",
+      "id": "6b646aae-4b08-4ade-93e9-f1f9c508308d",
+      "item": [
+        {
+          "name": "1. Build login URL (server-side flow)",
+          "id": "2d4a501e-c8f5-44fd-9a9c-77595e385738",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const u=pm.request.url.toString();",
+                  "pm.visualizer.set('<p style=\"font:14px sans-serif\">Open in a browser, sign in to Geni, click Allow, then copy the <b>code</b> from the redirect URL into <code>auth_code</code> and run step 2.</p><p><a href=\"{{u}}\" target=\"_blank\">{{u}}</a></p>',{u});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{oauth_base}}/authorize?client_id={{client_id}}&redirect_uri={{redirect_uri}}&state={{oauth_state}}",
+              "host": [
+                "{{oauth_base}}"
+              ],
+              "path": [
+                "authorize"
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirect_uri}}"
+                },
+                {
+                  "key": "state",
+                  "value": "{{oauth_state}}"
+                },
+                {
+                  "key": "scope",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Comma-delimited permissions. Default: full data access."
+                }
+              ]
+            },
+            "description": "Shows the Geni sign-in/authorize link. The redirect_uri must be on the Site Domain registered for your app."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Exchange code for access token",
+          "id": "8448afed-0bbe-419a-a255-b79cd9b2aa52",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();",
+                  "['access_token','refresh_token'].forEach(k=>{if(j[k]) pm.collectionVariables.set(k,j[k]);});",
+                  "pm.test('access_token issued',()=>pm.expect(j.access_token).to.be.a('string'));",
+                  "if(j.expires_in) console.log('expires in',j.expires_in,'s');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirect_uri}}",
+                  "type": "text"
+                },
+                {
+                  "key": "code",
+                  "value": "{{auth_code}}",
+                  "type": "text"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{oauth_base}}/request_token",
+              "host": [
+                "{{oauth_base}}"
+              ],
+              "path": [
+                "request_token"
+              ]
+            },
+            "description": "Saves access_token (and refresh_token if returned) to the collection."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Refresh access token",
+          "id": "6d4c0bdf-1c06-4ddb-92b5-0251b2d1e267",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();",
+                  "['access_token','refresh_token'].forEach(k=>{if(j[k]) pm.collectionVariables.set(k,j[k]);});",
+                  "pm.test('access_token issued',()=>pm.expect(j.access_token).to.be.a('string'));",
+                  "if(j.expires_in) console.log('expires in',j.expires_in,'s');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "{{refresh_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "refresh_token",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{oauth_base}}/request_token",
+              "host": [
+                "{{oauth_base}}"
+              ],
+              "path": [
+                "request_token"
+              ]
+            },
+            "description": "Get a new access token with the saved refresh_token."
+          },
+          "response": []
+        },
+        {
+          "name": "Who am I? (user)",
+          "id": "197ec6d1-71b9-41a1-a223-8aefdd407f5b",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user"
+              ],
+              "query": []
+            },
+            "description": "Quick check that the token works."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "★ Research · Barna / Krupl / Bukovsky",
+      "id": "c4d17420-05ce-4af6-91d7-eac2932c6373",
+      "item": [
+        {
+          "name": "Search: Borbala Barna",
+          "id": "22d5c01a-a6aa-4636-b06a-fbcaa4a38cd7",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile/search?names=Borbala%20Barna",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "names",
+                  "value": "Borbala Barna"
+                }
+              ]
+            },
+            "description": "Born 15 Sep 1886 Beodra, Torontál; arrived 24 Mar 1905 (S.S. Barbarossa); d. 1960 NYC."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Results table for profile/search",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const fd=x=>x?[x.date&&(x.date.formatted_date||[x.date.day,x.date.month,x.date.year].filter(Boolean).join('/')),x.location&&(x.location.place_name||x.location.city||x.location.country)].filter(Boolean).join(', '):'';",
+                  "const rows=(j.results||[]).map(p=>({id:p.id,name:p.name||p.display_name,gender:p.gender,birth:fd(p.birth),death:fd(p.death),url:p.profile_url}));",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>Page {{page}} · {{rows.length}} results{{#if next}} · more pages: set page={{nextp}}{{/if}}</p><table><tr><th>ID</th><th>Name</th><th>Sex</th><th>Birth</th><th>Death</th></tr>{{#each rows}}<tr><td><a href=\"{{url}}\">{{id}}</a></td><td>{{name}}</td><td>{{gender}}</td><td>{{birth}}</td><td>{{death}}</td></tr>{{/each}}</table>`,{rows,page:j.page||1,next:!!j.next_page,nextp:(j.page||1)+1});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search: Barbara Krupl (married name)",
+          "id": "b85a8e38-fd10-4336-8161-d65530986c2f",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile/search?names=Barbara%20Krupl",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "names",
+                  "value": "Barbara Krupl"
+                }
+              ]
+            },
+            "description": "Married Joseph Krupl (1882–1969); children Joseph G. (1916) and Florence Marie (1923)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Results table for profile/search",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const fd=x=>x?[x.date&&(x.date.formatted_date||[x.date.day,x.date.month,x.date.year].filter(Boolean).join('/')),x.location&&(x.location.place_name||x.location.city||x.location.country)].filter(Boolean).join(', '):'';",
+                  "const rows=(j.results||[]).map(p=>({id:p.id,name:p.name||p.display_name,gender:p.gender,birth:fd(p.birth),death:fd(p.death),url:p.profile_url}));",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>Page {{page}} · {{rows.length}} results{{#if next}} · more pages: set page={{nextp}}{{/if}}</p><table><tr><th>ID</th><th>Name</th><th>Sex</th><th>Birth</th><th>Death</th></tr>{{#each rows}}<tr><td><a href=\"{{url}}\">{{id}}</a></td><td>{{name}}</td><td>{{gender}}</td><td>{{birth}}</td><td>{{death}}</td></tr>{{/each}}</table>`,{rows,page:j.page||1,next:!!j.next_page,nextp:(j.page||1)+1});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search: Sophie Lang / Firestone",
+          "id": "85ba392e-b38b-4aa4-8eff-0a583d98c7b3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile/search?names=Sophie%20Firestone",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "names",
+                  "value": "Sophie Firestone"
+                }
+              ]
+            },
+            "description": "Sofie Lang b. 27 Jun 1906 Manhattan (cert 31116); m. Martin B. Firestone 14 May 1923 (cert 18181)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Results table for profile/search",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const fd=x=>x?[x.date&&(x.date.formatted_date||[x.date.day,x.date.month,x.date.year].filter(Boolean).join('/')),x.location&&(x.location.place_name||x.location.city||x.location.country)].filter(Boolean).join(', '):'';",
+                  "const rows=(j.results||[]).map(p=>({id:p.id,name:p.name||p.display_name,gender:p.gender,birth:fd(p.birth),death:fd(p.death),url:p.profile_url}));",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>Page {{page}} · {{rows.length}} results{{#if next}} · more pages: set page={{nextp}}{{/if}}</p><table><tr><th>ID</th><th>Name</th><th>Sex</th><th>Birth</th><th>Death</th></tr>{{#each rows}}<tr><td><a href=\"{{url}}\">{{id}}</a></td><td>{{name}}</td><td>{{gender}}</td><td>{{birth}}</td><td>{{death}}</td></tr>{{/each}}</table>`,{rows,page:j.page||1,next:!!j.next_page,nextp:(j.page||1)+1});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search: Paul Bukovsky",
+          "id": "591a9a41-114c-49af-ab55-47f61e019570",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile/search?names=Paul%20Bukovsky",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "names",
+                  "value": "Paul Bukovsky"
+                }
+              ]
+            },
+            "description": "b. ~1862 Hungary; wife Katharine Beizer; 30 Greenwich St (1905); Manalapan NJ (1910)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Results table for profile/search",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const fd=x=>x?[x.date&&(x.date.formatted_date||[x.date.day,x.date.month,x.date.year].filter(Boolean).join('/')),x.location&&(x.location.place_name||x.location.city||x.location.country)].filter(Boolean).join(', '):'';",
+                  "const rows=(j.results||[]).map(p=>({id:p.id,name:p.name||p.display_name,gender:p.gender,birth:fd(p.birth),death:fd(p.death),url:p.profile_url}));",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>Page {{page}} · {{rows.length}} results{{#if next}} · more pages: set page={{nextp}}{{/if}}</p><table><tr><th>ID</th><th>Name</th><th>Sex</th><th>Birth</th><th>Death</th></tr>{{#each rows}}<tr><td><a href=\"{{url}}\">{{id}}</a></td><td>{{name}}</td><td>{{gender}}</td><td>{{birth}}</td><td>{{death}}</td></tr>{{/each}}</table>`,{rows,page:j.page||1,next:!!j.next_page,nextp:(j.page||1)+1});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search: Pál Bukovszky",
+          "id": "b139c947-33cc-494b-8d81-2c970f3f1105",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile/search?names=P%C3%A1l%20Bukovszky",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "names",
+                  "value": "Pál Bukovszky"
+                }
+              ]
+            },
+            "description": "Hungarian spelling."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Results table for profile/search",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const fd=x=>x?[x.date&&(x.date.formatted_date||[x.date.day,x.date.month,x.date.year].filter(Boolean).join('/')),x.location&&(x.location.place_name||x.location.city||x.location.country)].filter(Boolean).join(', '):'';",
+                  "const rows=(j.results||[]).map(p=>({id:p.id,name:p.name||p.display_name,gender:p.gender,birth:fd(p.birth),death:fd(p.death),url:p.profile_url}));",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>Page {{page}} · {{rows.length}} results{{#if next}} · more pages: set page={{nextp}}{{/if}}</p><table><tr><th>ID</th><th>Name</th><th>Sex</th><th>Birth</th><th>Death</th></tr>{{#each rows}}<tr><td><a href=\"{{url}}\">{{id}}</a></td><td>{{name}}</td><td>{{gender}}</td><td>{{birth}}</td><td>{{death}}</td></tr>{{/each}}</table>`,{rows,page:j.page||1,next:!!j.next_page,nextp:(j.page||1)+1});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ancestors of a found profile (set profile_id)",
+          "id": "52f1b7ab-f4f7-433a-82d5-4a1c9c8f8fbf",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/ancestors?generations=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "ancestors"
+              ],
+              "query": [
+                {
+                  "key": "generations",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Copy an id from a search result (e.g. g6000000012345678901) into profile_id."
+          },
+          "response": []
+        },
+        {
+          "name": "Immediate family of a found profile",
+          "id": "23c63953-61c9-4a6d-b637-dc97bd051082",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/immediate-family",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "immediate-family"
+              ],
+              "query": []
+            },
+            "description": "Parents, partners, siblings and children with union ids."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "id": "87fa700a-a0fd-4b52-8988-9fe7e3dec709",
+      "item": [
+        {
+          "name": "profile",
+          "id": "d52ea314-1e1a-4a4e-b484-48454364e70e",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call. For example, to get just the first and last names of a profile: https://www.geni.com/api/profile-21557506?fields=first_name,last_name."
+                },
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can select a group of profiles on specific urls. For example: https://www.geni.com/api/profile?ids=101,31534,145 returns profile data for all three ids."
+                },
+                {
+                  "key": "only_ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — The returned data structures will contain urls to other objects in our system unless the request includes 'only_ids=true.' Passing only_ids will force the system to return ids only."
+                }
+              ]
+            },
+            "description": "through the API videos_updated_at String Timestamp of the last video updated/added to the profile. Will not be return if no videos exist. Note: Blank fields will not be returned to save bandwidth. Abo\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add",
+          "id": "9b2d2a7b-1cd9-40d0-904c-39c7a1612ac5",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile/add",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile",
+                "add"
+              ],
+              "query": []
+            },
+            "description": "Create an isolated tree and return the added profile. Parameters can be posted as form data or JSON.NOTE: This method is only for creating isolated branches. Use add-parent, add-child, add-partner and\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section (cf. detail_strings) (must be requested)"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "cause_of_death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's death cause"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's display name"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's last name"
+                },
+                {
+                  "key": "locked",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile has been locked down by a curator"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's maiden name"
+                },
+                {
+                  "key": "merge_note",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array or String — Note explaining the profile's merge status"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's middle name"
+                },
+                {
+                  "key": "names",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Nested maps of locales to name fields to values.Example: {\"de\": {\"last_name\": \"Smith\"}}"
+                },
+                {
+                  "key": "nicknames",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array of Strings — Also known as. Returned as an array, but can be set as a comma delimited list."
+                },
+                {
+                  "key": "occupation",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's occupation"
+                },
+                {
+                  "key": "public",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is public"
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's suffix"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's name title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/merge",
+          "id": "79787be6-6e78-43ce-9e82-60e47e5bc253",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/merge/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "merge",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": []
+            },
+            "description": "Will merge two profiles together if you have permission, or it will create a requested merge if you don’t have edit permission on both profiles.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fmerge&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/delete",
+          "id": "52f07dba-93f5-4c50-873d-57f13c3032f7",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "delete"
+              ],
+              "query": []
+            },
+            "description": "Deletes a profile\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fdelete&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/follow",
+          "id": "afaf2b14-fb22-4c00-adce-337252534dd8",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/follow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "follow"
+              ],
+              "query": []
+            },
+            "description": "Follows selected profile and returns it.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Ffollow&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/photos",
+          "id": "bba6d431-b00e-4059-a90f-1cf578445c17",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/photos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "photos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of photos tagged with a profile.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fphotos&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "profile/search",
+          "id": "21f5bb9e-fb96-4168-ade0-80faf7db2228",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile/search?names={{search_names}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "names",
+                  "value": "{{search_names}}",
+                  "disabled": false,
+                  "description": "String — Names you wish to search for."
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Page number"
+                }
+              ]
+            },
+            "description": "Returns a list of profiles based on provided names.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fsearch&version=1"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Results table for profile/search",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "const fd=x=>x?[x.date&&(x.date.formatted_date||[x.date.day,x.date.month,x.date.year].filter(Boolean).join('/')),x.location&&(x.location.place_name||x.location.city||x.location.country)].filter(Boolean).join(', '):'';",
+                  "const rows=(j.results||[]).map(p=>({id:p.id,name:p.name||p.display_name,gender:p.gender,birth:fd(p.birth),death:fd(p.death),url:p.profile_url}));",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>Page {{page}} · {{rows.length}} results{{#if next}} · more pages: set page={{nextp}}{{/if}}</p><table><tr><th>ID</th><th>Name</th><th>Sex</th><th>Birth</th><th>Death</th></tr>{{#each rows}}<tr><td><a href=\"{{url}}\">{{id}}</a></td><td>{{name}}</td><td>{{gender}}</td><td>{{birth}}</td><td>{{death}}</td></tr>{{/each}}</table>`,{rows,page:j.page||1,next:!!j.next_page,nextp:(j.page||1)+1});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "profile/update",
+          "id": "890a14f1-2643-4595-8060-a4188042dd95",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "update"
+              ],
+              "query": []
+            },
+            "description": "Update and return the changed profile. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fupdate&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section (cf. detail_strings) (must be requested)"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "cause_of_death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's death cause"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's display name"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's last name"
+                },
+                {
+                  "key": "locked",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile has been locked down by a curator"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's maiden name"
+                },
+                {
+                  "key": "merge_note",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array or String — Note explaining the profile's merge status"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's middle name"
+                },
+                {
+                  "key": "names",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Nested maps of locales to name fields to values.Example: {\"de\": {\"last_name\": \"Smith\"}}"
+                },
+                {
+                  "key": "nicknames",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array of Strings — Also known as. Returned as an array, but can be set as a comma delimited list."
+                },
+                {
+                  "key": "occupation",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's occupation"
+                },
+                {
+                  "key": "public",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is public"
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's suffix"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's name title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/videos",
+          "id": "ce9115db-03e9-4c12-97bb-5f2785231005",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/videos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "videos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of videos tagged with a profile.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fvideos&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "profile/compare",
+          "id": "40c40ef7-2ff4-4c95-b9fc-e467d1e1b84a",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/compare/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "compare",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": []
+            },
+            "description": "This action will compare two profiles, returning information about each profile and their immediate family data structure.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fcompare&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "profile/path-to",
+          "id": "0d4c3549-70d5-4675-abd7-cb63f17bf709",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/path-to/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "path-to",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": [
+                {
+                  "key": "path_type",
+                  "value": "",
+                  "disabled": true,
+                  "description": "String — Type of path search (values: blood or inlaw, default: closest)"
+                },
+                {
+                  "key": "refresh",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Refresh an exising path (if allowed)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Whether to search beyond maximum family range (default true)"
+                },
+                {
+                  "key": "skip_email",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Omits email notification of result (default false)"
+                },
+                {
+                  "key": "skip_notify",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Omits on-site notification of result (default false)"
+                }
+              ]
+            },
+            "description": "Will search for the relationship path from the first profile to the second, or it will indicate that a search is running in which case you should try again later.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fpath-to&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "profile/unfollow",
+          "id": "27c9be49-5ec7-4f8f-bc32-de23864301ec",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/unfollow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "unfollow"
+              ],
+              "query": []
+            },
+            "description": "Unfollows selected profile and returns it.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Funfollow&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add-child",
+          "id": "a8352f05-3fc5-47c6-8d9a-d7f99e9a34de",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/add-child",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "add-child"
+              ],
+              "query": []
+            },
+            "description": "Add a child to a profile and return the added profile. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd-child&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section (cf. detail_strings) (must be requested)"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's display name"
+                },
+                {
+                  "key": "divorce",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Divorce date and location"
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's email address"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's last name"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's maiden name"
+                },
+                {
+                  "key": "marriage",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Marriage date and location"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's middle name"
+                },
+                {
+                  "key": "names",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Nested maps of locales to name fields to values.Example: {\"de\": {\"last_name\": \"Smith\"}}"
+                },
+                {
+                  "key": "nicknames",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array of Strings — Also known as. Returned as an array, but can be set as a comma delimited list."
+                },
+                {
+                  "key": "public",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is public"
+                },
+                {
+                  "key": "relationship_modifier",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Set to 'adopt' or 'foster' when adding children or siblings to a profile"
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's suffix"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's name title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add-photo",
+          "id": "7ec5dfb7-8b00-4cf5-8623-a14d4da26028",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/add-photo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "add-photo"
+              ],
+              "query": []
+            },
+            "description": "Adds a photo and tags the profile in it. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd-photo&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — Photo's date in JSON form"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Photo's description"
+                },
+                {
+                  "key": "file",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Base64 encoded file to create photo from"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Photo's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add-video",
+          "id": "de0d2eea-88c7-4527-949a-23b92f7b3931",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/add-video",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "add-video"
+              ],
+              "query": []
+            },
+            "description": "Adds a video and tags the profile in it. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd-video&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — Video's date in JSON form"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Video's description"
+                },
+                {
+                  "key": "file",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Base64 encoded file to create video from"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Video's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/ancestors",
+          "id": "52abaa28-6cbc-4b8e-9a78-f9552d46a8c5",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/ancestors",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "ancestors"
+              ],
+              "query": [
+                {
+                  "key": "generations",
+                  "value": "5",
+                  "disabled": true,
+                  "description": "Number — Number of generations (default: 5, max: 20)"
+                }
+              ]
+            },
+            "description": "Returns the focus profile and a hash of its ancestors.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fancestors&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "profile/documents",
+          "id": "c35e9b8a-acd2-4002-ac55-7783a3b10fdc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/documents",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of documents tagged with a profile.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fdocuments&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add-parent",
+          "id": "4a2eec96-3b03-4614-911a-6ce79a0b7c0b",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/add-parent",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "add-parent"
+              ],
+              "query": []
+            },
+            "description": "Add a parent to a profile and return the added profile. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd-parent&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section (cf. detail_strings) (must be requested)"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's display name"
+                },
+                {
+                  "key": "divorce",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Divorce date and location"
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's email address"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's last name"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's maiden name"
+                },
+                {
+                  "key": "marriage",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Marriage date and location"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's middle name"
+                },
+                {
+                  "key": "names",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Nested maps of locales to name fields to values.Example: {\"de\": {\"last_name\": \"Smith\"}}"
+                },
+                {
+                  "key": "nicknames",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array of Strings — Also known as. Returned as an array, but can be set as a comma delimited list."
+                },
+                {
+                  "key": "public",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is public"
+                },
+                {
+                  "key": "relationship_modifier",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Set to 'adopt' or 'foster' when adding children or siblings to a profile"
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's suffix"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's name title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add-mugshot",
+          "id": "972d3289-5f9e-45d8-ba2b-0422bfe722b3",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/add-mugshot",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "add-mugshot"
+              ],
+              "query": []
+            },
+            "description": "Add a mugshot to a profile and return the photo model. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd-mugshot&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "album_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Id of the album where the photo will be stored"
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — Photo's date in JSON form"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Photo's description"
+                },
+                {
+                  "key": "file",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Base64 encoded file to create photo from, unless photo_id is provided"
+                },
+                {
+                  "key": "photo_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — If provided, it will be used as a mugshot photo"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Photo's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add-partner",
+          "id": "1d17e6f7-bd1a-432f-a12f-f6339afb15de",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/add-partner",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "add-partner"
+              ],
+              "query": []
+            },
+            "description": "Add a partner to a profile and return the added profile. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd-partner&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section (cf. detail_strings) (must be requested)"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's display name"
+                },
+                {
+                  "key": "divorce",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Divorce date and location"
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's email address"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's last name"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's maiden name"
+                },
+                {
+                  "key": "marriage",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Marriage date and location"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's middle name"
+                },
+                {
+                  "key": "names",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Nested maps of locales to name fields to values.Example: {\"de\": {\"last_name\": \"Smith\"}}"
+                },
+                {
+                  "key": "nicknames",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array of Strings — Also known as. Returned as an array, but can be set as a comma delimited list."
+                },
+                {
+                  "key": "public",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is public"
+                },
+                {
+                  "key": "relationship_modifier",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Set to 'adopt' or 'foster' when adding children or siblings to a profile"
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's suffix"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's name title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add-sibling",
+          "id": "34d1e0ea-4d58-4ed3-950d-5084f607eb01",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/add-sibling",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "add-sibling"
+              ],
+              "query": []
+            },
+            "description": "Add a sibling to a profile and return the added profile. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd-sibling&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section (cf. detail_strings) (must be requested)"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's display name"
+                },
+                {
+                  "key": "divorce",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Divorce date and location"
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's email address"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's last name"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's maiden name"
+                },
+                {
+                  "key": "marriage",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Marriage date and location"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's middle name"
+                },
+                {
+                  "key": "names",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Nested maps of locales to name fields to values.Example: {\"de\": {\"last_name\": \"Smith\"}}"
+                },
+                {
+                  "key": "nicknames",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array of Strings — Also known as. Returned as an array, but can be set as a comma delimited list."
+                },
+                {
+                  "key": "public",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is public"
+                },
+                {
+                  "key": "relationship_modifier",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Set to 'adopt' or 'foster' when adding children or siblings to a profile"
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's suffix"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's name title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/add-document",
+          "id": "d68a55b5-54a2-4921-b31b-4a50cf514c0d",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/add-document",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "add-document"
+              ],
+              "query": []
+            },
+            "description": "Adds a document and tags the profile in it. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fadd-document&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — Document's date in JSON form"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Document's description"
+                },
+                {
+                  "key": "file",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Base64 encoded file to create document from"
+                },
+                {
+                  "key": "labels",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Document's comma separated labels"
+                },
+                {
+                  "key": "source_url",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Source URL for the document"
+                },
+                {
+                  "key": "text",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Text to create document from"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Document's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/update-basics",
+          "id": "e8e0bb41-6d9c-4983-8a89-5b0f5c396758",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/update-basics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "update-basics"
+              ],
+              "query": []
+            },
+            "description": "Update fields on the basics and about tabs and return the changed profile. Parameters can be posted as form data or JSON.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fupdate-basics&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section (cf. detail_strings) (must be requested)"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "cause_of_death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's death cause"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's display name"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's last name"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's maiden name"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's middle name"
+                },
+                {
+                  "key": "names",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Nested maps of locales to name fields to values.Example: {\"de\": {\"last_name\": \"Smith\"}}"
+                },
+                {
+                  "key": "nicknames",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array of Strings — Also known as. Returned as an array, but can be set as a comma delimited list."
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's suffix"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's name title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "profile/immediate-family",
+          "id": "4e5fbada-c37a-4c8c-8221-a5d212314dd1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile-{{profile_id}}/immediate-family",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profile-{{profile_id}}",
+                "immediate-family"
+              ],
+              "query": []
+            },
+            "description": "Returns the focus profile and a hash of its immediate family.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=profile%2Fimmediate-family&version=1"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Union",
+      "id": "bdd8a0ad-b51c-4d2a-a42a-300e385a80ca",
+      "item": [
+        {
+          "name": "union",
+          "id": "e482aa7c-82d9-45af-980c-bf8823d4ccc8",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/union-{{union_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "union-{{union_id}}"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call. For example, to get just the status of a union: https://www.geni.com/api/union-12276689?fields=status."
+                },
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can select a group of unions on specific urls. For example: https://www.geni.com/api/union?ids=101,31534,145 returns union data for all three ids."
+                },
+                {
+                  "key": "only_ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — The returned data structures will contain urls to other objects in our system unless the request includes 'only_ids=true.' Passing only_ids will force the system to return ids only."
+                }
+              ]
+            },
+            "description": "(spouse|ex_spouse) Note: Blank fields will not be returned to save bandwidth. About Directory Surname Terms Privacy Blog World Family Tree Help rails-1a-013 © 2026 Geni.com English (US) eesti Svenska \n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=union&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "union/update",
+          "id": "026e1be7-13e6-46fe-aee5-fdbec0a46f12",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/union-{{union_id}}/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "union-{{union_id}}",
+                "update"
+              ],
+              "query": []
+            },
+            "description": "Updates a union\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=union%2Fupdate&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "divorce",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Divorce date and location"
+                },
+                {
+                  "key": "marriage",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Marriage date and location"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "union/add-child",
+          "id": "7cb036f8-0f8a-4abd-ae8c-dd6f1a6c1ee6",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/union-{{union_id}}/add-child",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "union-{{union_id}}",
+                "add-child"
+              ],
+              "query": []
+            },
+            "description": "Add a child to a union and return the added profile.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=union%2Fadd-child&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's display name"
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The Profile's email address"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's last name"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's maiden name"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's middle name"
+                },
+                {
+                  "key": "public",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is public"
+                },
+                {
+                  "key": "relationship_modifier",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Set to 'adopt' or 'foster' when adding children to a union"
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's suffix"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "union/add-partner",
+          "id": "299a58e4-a3f8-4b3c-ba5f-c8b8e4cf6efc",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/union-{{union_id}}/add-partner",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "union-{{union_id}}",
+                "add-partner"
+              ],
+              "query": []
+            },
+            "description": "Add a partner to a union and return the added profile.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=union%2Fadd-partner&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "about_me",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Profile's about me section"
+                },
+                {
+                  "key": "baptism",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's baptism event info"
+                },
+                {
+                  "key": "birth",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's birth event info"
+                },
+                {
+                  "key": "burial",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's burial event info"
+                },
+                {
+                  "key": "death",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Event — Profile's death event info"
+                },
+                {
+                  "key": "display_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's display name"
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The Profile's email address"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's gender"
+                },
+                {
+                  "key": "is_alive",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is living"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's last name"
+                },
+                {
+                  "key": "maiden_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's maiden name"
+                },
+                {
+                  "key": "middle_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's middle name"
+                },
+                {
+                  "key": "public",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Boolean — True if the profile is public"
+                },
+                {
+                  "key": "suffix",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The profile's suffix"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "id": "60e6152a-38bb-4670-8082-dab5878bfaae",
+      "item": [
+        {
+          "name": "user",
+          "id": "de6d69a6-c0b3-4956-919f-28f78e39694d",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user"
+              ],
+              "query": []
+            },
+            "description": "Returned Fields Name Type Description account_type String The user's account type: basic, plus, pro name String The user's name Note: Blank fields will not be returned to save bandwidth. About Directo\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/add",
+          "id": "abd01470-a4dc-4bdb-8f87-8c322819cf4c",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/add",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "add"
+              ],
+              "query": []
+            },
+            "description": "Create an account and return the created user. The OAuth Access token is returned in the X-API-OAuth-access_token header.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fadd&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — The user's email"
+                },
+                {
+                  "key": "first_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — The user's first name"
+                },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — The user's gender: m, f, or u"
+                },
+                {
+                  "key": "last_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — The user's last name"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "user/metadata",
+          "id": "361a85f7-ab42-4ce6-a04b-55a5c325dfb1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/metadata",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "metadata"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "String — Comma separated list of ids of users you would like to get metadata for."
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required ids String Comma separated list of ids of users you would like to get metadata for. false Returned Fields Name Type Description data Hash Custom metadata in J\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fmetadata&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/my-albums",
+          "id": "5a6d746a-0d2a-4125-9358-e51a243d8062",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/my-albums",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "my-albums"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fmy-albums&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/my-labels",
+          "id": "9506e92f-e933-4cd8-96d3-dc640fbcefbf",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/my-labels",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "my-labels"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fmy-labels&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/max-family",
+          "id": "e262771c-7bba-465c-9b1f-d34d7957545f",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/max-family",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "max-family"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fmax-family&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/update-metadata",
+          "id": "2d4b6bd7-af01-4b60-bf39-661b52e8f097",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/update-metadata",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "update-metadata"
+              ],
+              "query": []
+            },
+            "description": "Updates user metadata for your application. Limited to 512 bytes.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fupdate-metadata&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "data",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Custom metadata in JSON format to be stored by your application."
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "user/uploaded-photos",
+          "id": "60bf4852-0b60-4299-98b7-bf9a23068d76",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/uploaded-photos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "uploaded-photos"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fuploaded-photos&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/uploaded-videos",
+          "id": "c8128af2-6f2b-4886-9592-7325114ec996",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/uploaded-videos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "uploaded-videos"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fuploaded-videos&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/managed-profiles",
+          "id": "c45023e8-a3ec-49ed-b55f-71d9bdf0d4e1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/managed-profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "managed-profiles"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fmanaged-profiles&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/followed-profiles",
+          "id": "92908162-f000-4ace-9db8-d67f3eaf1ce8",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/followed-profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "followed-profiles"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Ffollowed-profiles&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/followed-projects",
+          "id": "f712db69-b6ee-40e1-8910-8ec4f61943f4",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/followed-projects",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "followed-projects"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Ffollowed-projects&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/followed-surnames",
+          "id": "55a89e39-8531-46c5-8f5c-05b97e98cca3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/followed-surnames",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "followed-surnames"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Ffollowed-surnames&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/followed-documents",
+          "id": "7c787b82-9354-43f8-b2b4-2c74a635cf26",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/followed-documents",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "followed-documents"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Ffollowed-documents&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "user/uploaded-documents",
+          "id": "b4f6ad42-4f93-41a9-98d1-2fd59ec9e661",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/uploaded-documents",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "uploaded-documents"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Parameters Name Type Description Required fields Array of Strings You can pass a list of fields you want returned in your call. false page Number Page number of results to return. Default 1. false per\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=user%2Fuploaded-documents&version=1"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Surname",
+      "id": "5e86686d-5a75-425e-a746-f516ab59c25d",
+      "item": [
+        {
+          "name": "surname",
+          "id": "72eff69e-3ea3-465f-81b8-598da5c230d8",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/surname-{{surname_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "surname-{{surname_id}}"
+              ],
+              "query": []
+            },
+            "description": "Returns information about a surname.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=surname&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "surname/profiles",
+          "id": "63508038-432b-4bd0-804c-76c7ec276219",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/surname-{{surname_id}}/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "surname-{{surname_id}}",
+                "profiles"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of profiles for a surname.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=surname%2Fprofiles&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "surname/followers",
+          "id": "08237569-adb9-4b5a-8c4f-550983894b4d",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/surname-{{surname_id}}/followers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "surname-{{surname_id}}",
+                "followers"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of users following a surname.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=surname%2Ffollowers&version=1"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Project",
+      "id": "52a16aa7-f6eb-4db5-bde4-6752dc565d4c",
+      "item": [
+        {
+          "name": "project",
+          "id": "fcc7e1df-1567-4b76-9c2c-15c5abbdfedf",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/project-{{project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "project-{{project_id}}"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call. For example, to get just the name of a project: https://www.geni.com/api/project-6?fields=name."
+                },
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can select a group of profiles on specific urls. For example: https://www.geni.com/api/profile?ids=101,31534,145 returns profile data for all three ids."
+                }
+              ]
+            },
+            "description": "Note: Blank fields will not be returned to save bandwidth. About Directory Surname Terms Privacy Blog World Family Tree Help rails-1a-011 © 2026 Geni.com English (US) eesti Svenska Español (España) Fr\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=project&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "project/search",
+          "id": "c1809c65-e61c-42e7-b363-e636e50bdf13",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/project/search?q={{search_names}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "project",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{search_names}}",
+                  "disabled": false,
+                  "description": "String — search terms"
+                }
+              ]
+            },
+            "description": "Returns a list of projects based on query matches in the name and description fields.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=project%2Fsearch&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "project/update",
+          "id": "dfe2f853-ebca-44e0-a11c-8c28dd9dc631",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/project-{{project_id}}/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "project-{{project_id}}",
+                "update"
+              ],
+              "query": []
+            },
+            "description": "Update a project.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=project%2Fupdate&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The project's description"
+                },
+                {
+                  "key": "descriptions",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Map of locales to values.Example: {\"de\": \"Beschreibung\"}"
+                },
+                {
+                  "key": "name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The project's name"
+                },
+                {
+                  "key": "names",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Hash — Map of locales to values.Example: {\"de\": \"Projektname\"}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "project/profiles",
+          "id": "15fe0b99-6e18-4cf7-9040-0718636b747a",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/project-{{project_id}}/profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "project-{{project_id}}",
+                "profiles"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of profiles tagged in a project.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=project%2Fprofiles&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "project/followers",
+          "id": "fb928503-b115-4ad8-85cb-b311684f3066",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/project-{{project_id}}/followers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "project-{{project_id}}",
+                "followers"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of users following a project.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=project%2Ffollowers&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "project/add_profiles",
+          "id": "78d5084e-90cd-4841-b287-21053eafdc14",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/project-{{project_id}}/add_profiles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "project-{{project_id}}",
+                "add_profiles"
+              ],
+              "query": []
+            },
+            "description": "Adds a list of profiles to a project.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=project%2Fadd_profiles&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "profile_ids",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Comma separated list of profile guids and/or node ids"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "project/add_documents",
+          "id": "ab7f0a6a-eb56-4b2b-8197-3ead9102c64b",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/project-{{project_id}}/add_documents",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "project-{{project_id}}",
+                "add_documents"
+              ],
+              "query": []
+            },
+            "description": "Adds a list of documents to a project.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=project%2Fadd_documents&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "ids",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Comma separated list of guids and/or node ids"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "project/collaborators",
+          "id": "b8ffa9a0-d4b7-4589-b386-e51006be65b6",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/project-{{project_id}}/collaborators",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "project-{{project_id}}",
+                "collaborators"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of users collaborating on a project.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=project%2Fcollaborators&version=1"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Document",
+      "id": "bca1c470-6689-470b-9dc4-49acdfa7683e",
+      "item": [
+        {
+          "name": "document",
+          "id": "5f79fd04-8800-494c-929e-17fc131ca9cb",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call. For example, to get just the title of a document: https://www.geni.com/api/document-339953?fields=title."
+                },
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can select a group of documents on specific urls. For example: https://www.geni.com/api/document?ids=101,31534,145 returns document data for all three ids."
+                }
+              ]
+            },
+            "description": "Note: Blank fields will not be returned to save bandwidth. About Directory Surname Terms Privacy Blog World Family Tree Help rails-1a-013 © 2026 Geni.com English (US) eesti Svenska Español (España) Fr\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "document/add",
+          "id": "62177b6f-a4fc-492e-8bd5-7649b16b5185",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document/add",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document",
+                "add"
+              ],
+              "query": []
+            },
+            "description": "Uploads and creates a document.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Fadd&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "content_type",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Content type of the file, required if file is provided"
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — The document's date in JSON form"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The document's description"
+                },
+                {
+                  "key": "file",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Base64 encoded file to create document from"
+                },
+                {
+                  "key": "file_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Name of the file, required if file is provided"
+                },
+                {
+                  "key": "labels",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The document's comma separated labels"
+                },
+                {
+                  "key": "source_url",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Source URL for the document"
+                },
+                {
+                  "key": "text",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Text to create document from"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — The document's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "document/tag",
+          "id": "2d1d3f8e-d9b3-4e58-b7f5-245b6eb6cc8b",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}/tag/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}",
+                "tag",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": []
+            },
+            "description": "Tags a person in a document.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Ftag&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "document/tags",
+          "id": "fc03f577-683a-43e1-972b-47258841c007",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}/tags",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}",
+                "tags"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of people tagged in a document.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Ftags&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "document/untag",
+          "id": "325684ba-34be-4076-9c8c-d3db0d79652b",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}/untag/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}",
+                "untag",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": []
+            },
+            "description": "Removes a person tag from a document.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Funtag&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "document/delete",
+          "id": "f4efcb4c-bb16-4a22-8edc-e749a50d51b4",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}",
+                "delete"
+              ],
+              "query": []
+            },
+            "description": "Deletes document.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Fdelete&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "document/update",
+          "id": "3aed42d6-5fd1-4c05-87fc-e77bbccf09ff",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}",
+                "update"
+              ],
+              "query": []
+            },
+            "description": "Updates document data and returns the updated document.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Fupdate&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — The document's date"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The document's description"
+                },
+                {
+                  "key": "labels",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Array of Strings — The document's labels in a comma separated list"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The document's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "document/comment",
+          "id": "626fb382-c540-4563-88aa-58a912d36fb6",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}/comment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}",
+                "comment"
+              ],
+              "query": []
+            },
+            "description": "Adds a comment to the document\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Fcomment&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "text",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Comment text"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Comment title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "document/comments",
+          "id": "bcbdfa38-15aa-44a4-9658-7c8f44a0608c",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}/comments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}",
+                "comments"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of document comments\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Fcomments&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "document/projects",
+          "id": "c653bf88-e782-43f5-b5cd-ffa762d79998",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document-{{document_id}}/projects",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "document-{{document_id}}",
+                "projects"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of projects that the document is associated with\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=document%2Fprojects&version=1"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Photo",
+      "id": "4aaf4a44-758a-4593-875d-0deaae91d388",
+      "item": [
+        {
+          "name": "photo",
+          "id": "0995ece2-7fe9-46bc-bc11-63d644052750",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo-{{photo_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo-{{photo_id}}"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call. For example, to get just the title of a photo: https://www.geni.com/api/photo-21557506?fields=title."
+                },
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can select a group of photos on specific urls. For example: https://www.geni.com/api/photo?ids=101,31534,145 returns photo data for all three ids."
+                }
+              ]
+            },
+            "description": "Note: Blank fields will not be returned to save bandwidth. About Directory Surname Terms Privacy Blog World Family Tree Help rails-1a-010 © 2026 Geni.com English (US) eesti Svenska Español (España) Fr\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "photo/add",
+          "id": "7c10a05b-a760-40b5-bb84-1fc8d95bdc8f",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo/add",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo",
+                "add"
+              ],
+              "query": []
+            },
+            "description": "Uploads and creates a photo.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo%2Fadd&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "album_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The id of the album where the photo will be stored"
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — The photo's date in JSON form"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The photo's description"
+                },
+                {
+                  "key": "file",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "BinaryFormData — File to create photo from"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — The photo's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "photo/tag",
+          "id": "99864281-25c5-4db8-a718-53872e0b1066",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo-{{photo_id}}/tag/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo-{{photo_id}}",
+                "tag",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": []
+            },
+            "description": "Tags a person in a photo.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo%2Ftag&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "photo/tags",
+          "id": "d97c613a-a63a-4fda-83ed-3cdf5dc7c33e",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo-{{photo_id}}/tags",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo-{{photo_id}}",
+                "tags"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of people tagged in a photo.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo%2Ftags&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "photo/untag",
+          "id": "dcf645ab-2765-4442-8e29-d1a9cee82815",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo-{{photo_id}}/untag/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo-{{photo_id}}",
+                "untag",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": []
+            },
+            "description": "Removes a person tag from a photo.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo%2Funtag&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "photo/delete",
+          "id": "61f97061-dcf2-4f1f-94ce-c6b6b06f71cf",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo-{{photo_id}}/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo-{{photo_id}}",
+                "delete"
+              ],
+              "query": []
+            },
+            "description": "Deletes photo.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo%2Fdelete&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "photo/update",
+          "id": "27b9e4de-90e1-4f56-b8a2-bd4299e0b262",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo-{{photo_id}}/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo-{{photo_id}}",
+                "update"
+              ],
+              "query": []
+            },
+            "description": "Updates photo data and returns the updated photo.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo%2Fupdate&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The photo's date"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The photo's description"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The photo's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "photo/comment",
+          "id": "f4ecdb66-d2c9-4e1e-bc56-e6b4da09e738",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo-{{photo_id}}/comment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo-{{photo_id}}",
+                "comment"
+              ],
+              "query": []
+            },
+            "description": "Adds a comment to the photo\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo%2Fcomment&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "text",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Comment text"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Comment title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "photo/comments",
+          "id": "7d2f4c00-3e86-456c-bc78-29be2a1258fd",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo-{{photo_id}}/comments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo-{{photo_id}}",
+                "comments"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of photo comments\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo%2Fcomments&version=1"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Photo album",
+      "id": "fe8ca8ec-f9aa-4b75-a706-872f0ac75580",
+      "item": [
+        {
+          "name": "photo_album",
+          "id": "56912123-39b2-47c6-8c8f-a90f37aa0767",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo_album-{{photo_album_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo_album-{{photo_album_id}}"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call. For example, to get just the title of a photo: https://www.geni.com/api/photo-21557506?fields=title."
+                },
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can select a group of photos on specific urls. For example: https://www.geni.com/api/photo?ids=101,31534,145 returns photo data for all three ids."
+                }
+              ]
+            },
+            "description": "Returns information about a photo.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo_album&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "photo_album/add",
+          "id": "7db40986-682a-4115-9ac9-d84a184f0254",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo_album/add",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo_album",
+                "add"
+              ],
+              "query": []
+            },
+            "description": "Creates a photo album and returns the created album.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo_album%2Fadd&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The photo album's name"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "photo_album/photos",
+          "id": "0612907c-e20c-4ef0-b2ba-53b7cf4e5f08",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo_album-{{photo_album_id}}/photos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo_album-{{photo_album_id}}",
+                "photos"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count"
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default is 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50. Default is 50."
+                }
+              ]
+            },
+            "description": "Returns a list of photos from a photo album.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo_album%2Fphotos&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "photo_album/update",
+          "id": "97806402-e041-4cfb-aa62-d13e9185516f",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/photo_album-{{photo_album_id}}/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "photo_album-{{photo_album_id}}",
+                "update"
+              ],
+              "query": []
+            },
+            "description": "Updates a photo album and returns the updated album.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=photo_album%2Fupdate&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The photo album's name"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Video",
+      "id": "5c121aee-f756-4662-b860-84927861a878",
+      "item": [
+        {
+          "name": "video",
+          "id": "1b0dc04a-6a73-4938-ab6f-80a7c0f131f3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video-{{video_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video-{{video_id}}"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call. For example, to get just the title of a video: https://www.geni.com/api/video-21557506?fields=title."
+                },
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can select a group of videos on specific urls. For example: https://www.geni.com/api/video?ids=101,31534,145 returns video data for all three ids."
+                }
+              ]
+            },
+            "description": "Note: Blank fields will not be returned to save bandwidth. About Directory Surname Terms Privacy Blog World Family Tree Help rails-1a-012 © 2026 Geni.com English (US) eesti Svenska Español (España) Fr\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "video/add",
+          "id": "76ccfb16-f2bf-47bf-86be-90bcd18c9421",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video/add",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video",
+                "add"
+              ],
+              "query": []
+            },
+            "description": "Uploads and creates a video.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video%2Fadd&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — The video's date in JSON form"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The video's description"
+                },
+                {
+                  "key": "file",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "BinaryFormData — File to create video from"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — The video's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "video/tag",
+          "id": "1b74619f-eefb-4a7e-a95a-a21a86023e17",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video-{{video_id}}/tag/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video-{{video_id}}",
+                "tag",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": []
+            },
+            "description": "Tags a person in a video.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video%2Ftag&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "video/tags",
+          "id": "b8d3e289-ca62-4740-aeb2-fc0957ffaa0c",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video-{{video_id}}/tags",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video-{{video_id}}",
+                "tags"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of people tagged in a video.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video%2Ftags&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "video/untag",
+          "id": "7ae02d6b-ebad-4698-8507-d5fa02a8f7d1",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video-{{video_id}}/untag/profile-{{other_profile_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video-{{video_id}}",
+                "untag",
+                "profile-{{other_profile_id}}"
+              ],
+              "query": []
+            },
+            "description": "Removes a person tag from a video.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video%2Funtag&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "video/delete",
+          "id": "433c2ee0-b56a-40e5-b79b-042135dc6d86",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video-{{video_id}}/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video-{{video_id}}",
+                "delete"
+              ],
+              "query": []
+            },
+            "description": "Deletes video.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video%2Fdelete&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "video/update",
+          "id": "06d5a2dd-ce4e-4de5-9e36-e48db16927b5",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video-{{video_id}}/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video-{{video_id}}",
+                "update"
+              ],
+              "query": []
+            },
+            "description": "Updates video data and returns the updated video.\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video%2Fupdate&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "Date — The video's date"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — The video's title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "video/comment",
+          "id": "cae5cedc-7362-49be-be13-1877b589a2be",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video-{{video_id}}/comment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video-{{video_id}}",
+                "comment"
+              ],
+              "query": []
+            },
+            "description": "Adds a comment to the video\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video%2Fcomment&version=1",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "text",
+                  "value": "",
+                  "type": "text",
+                  "disabled": false,
+                  "description": "String — Comment text"
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "String — Comment title"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "video/comments",
+          "id": "a5f3010c-9f94-4262-af1d-a9a219b3838f",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/video-{{video_id}}/comments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "video-{{video_id}}",
+                "comments"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Boolean — Only return the count: true or false (default false)"
+                },
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Page number of results to return. Default 1."
+                },
+                {
+                  "key": "per_page",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Number — Number of results per page. Max 50 (default 50)"
+                }
+              ]
+            },
+            "description": "Returns a list of video comments\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=video%2Fcomments&version=1"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Revision",
+      "id": "50861088-96a2-4388-bc20-81619fcce9e7",
+      "item": [
+        {
+          "name": "revision",
+          "id": "d3c3d9d9-fe20-4770-9228-9ea33b464208",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/revision-{{revision_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "revision-{{revision_id}}"
+              ],
+              "query": [
+                {
+                  "key": "fields",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can pass a list of fields you want returned in your call. For example, to get just the action of a revision: https://www.geni.com/api/revision-1?fields=action."
+                },
+                {
+                  "key": "ids",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Array of Strings — You can select a group of revisions on specific urls. For example: https://www.geni.com/api/revision?ids=101,31534,145 returns revision data for all three ids."
+                }
+              ]
+            },
+            "description": "Note: Blank fields will not be returned to save bandwidth. About Directory Surname Terms Privacy Blog World Family Tree Help rails-1a-010 © 2026 Geni.com English (US) eesti Svenska Español (España) Fr\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=revision&version=1"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "id": "9810ea4a-c7a7-4909-9a43-f60727aab8e0",
+      "item": [
+        {
+          "name": "stats",
+          "id": "a85a2d40-d4f9-42b5-8f06-747f63604b49",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "stats"
+              ],
+              "query": []
+            },
+            "description": "Array of Hashes List of available statistics Note: Blank fields will not be returned to save bandwidth. About Directory Surname Terms Privacy Blog World Family Tree Help rails-1a-013 © 2026 Geni.com E\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=stats&version=1"
+          },
+          "response": []
+        },
+        {
+          "name": "stats/world-family-tree",
+          "id": "f6e62997-8d13-42e0-aa10-bd1adf521894",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/stats/world-family-tree",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "stats",
+                "world-family-tree"
+              ],
+              "query": []
+            },
+            "description": "Returned Fields Name Type Description formatted_size String Formatted number of profiles in the World Family Tree size Number Number of profiles in the World Family Tree Note: Blank fields will not be\n\nOfficial reference: https://www.geni.com/platform/developer/help/api?path=stats%2Fworld-family-tree&version=1"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://www.geni.com/api",
+      "type": "string"
+    },
+    {
+      "key": "oauth_base",
+      "value": "https://www.geni.com/platform/oauth",
+      "type": "string"
+    },
+    {
+      "key": "client_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "client_secret",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "redirect_uri",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "auth_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "oauth_state",
+      "value": "geni-postman",
+      "type": "string"
+    },
+    {
+      "key": "search_names",
+      "value": "Borbala Barna",
+      "type": "string"
+    },
+    {
+      "key": "profile_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_profile_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "union_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "surname_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "project_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "document_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "photo_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "photo_album_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "video_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "revision_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
